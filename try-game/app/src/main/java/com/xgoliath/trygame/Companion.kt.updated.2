@@ -1,0 +1,65 @@
+package com.xgoliath.trygame
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+
+class Companion(x: Float, y: Float, loader: SpriteLoader) : Entity(x, y, 48f, 48f) {
+    private var idleAnim: AnimatedSprite? = null
+    var followTarget: Player? = null
+    var isRidden = false
+    var isAttacking = false
+
+    init {
+        val targetH = (Config.TARGET_CHARACTER_HEIGHT * Config.COMPANION_SCALE).toInt()
+        idleAnim = AnimatedSprite(loader, "marten-standing.png", 200, targetH)
+        idleAnim?.let { width = it.width().toFloat(); height = it.height().toFloat() }
+        // companion hitbox
+        hitboxOffsetX = width * 0.15f
+        hitboxOffsetY = height * 0.2f
+        hitboxWidth = width * 0.7f
+        hitboxHeight = height * 0.7f
+    }
+
+    override fun update(delta: Long) {
+        super.update(delta)
+        followTarget?.let { t ->
+            if (!isRidden) {
+                // simple smooth follow towards a point near the player
+                val targetX = t.x - 60f
+                val dx = targetX - x
+                vx = dx * 3f / 1000f * delta
+                // simple vertical follow
+                val dy = t.y - y
+                vy = dy * 3f / 1000f * delta
+            } else {
+                // when ridden, stay on player with offset
+                x = t.x + 10f
+                y = t.y - (height * 0.6f)
+                vx = 0f; vy = 0f
+            }
+        }
+    }
+
+    override fun draw(canvas: Canvas) {
+        idleAnim?.draw(canvas, x, y) ?: super.draw(canvas)
+    }
+
+    fun attack() {
+        isAttacking = true
+    }
+
+    fun attackHitboxIntersects(e: Enemy): Boolean {
+        // simple AABB using hitbox
+        return android.graphics.RectF.intersects(this.hitboxRect(), e.hitboxRect())
+    }
+
+    fun collidesWith(p: Platform): Boolean {
+        val bottom = y + height
+        return bottom >= p.y && bottom <= p.y + 50 && x + width > p.x && x < p.x + p.width
+    }
+
+    fun landOn(p: Platform) {
+        y = p.y - height
+        vy = 0f
+    }
+}
