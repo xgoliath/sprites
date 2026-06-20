@@ -1,0 +1,26 @@
+package com.xgoliath.trygame
+
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+
+open class Entity(var x: Float, var y: Float, var width: Float = 64f, var height: Float = 64f) {
+    var vx = 0f
+    var vy = 0f
+    var paint = Paint()
+
+    open fun update(delta: Long) {
+        x += vx * (delta / 1000f)
+        y += vy * (delta / 1000f)
+    }
+
+    open fun draw(canvas: Canvas) {
+        paint.color = Color.MAGENTA
+        canvas.drawRect(android.graphics.RectF(x, y, x + width, y + height), paint)
+    }
+
+    fun collidesWith(p: Platform): Boolean {
+        val bottom = y + height
+        return bottom >= p.y && bottom <= p.y + 50 && x + width > p.x && x < p.x + p.width
+    }
+}

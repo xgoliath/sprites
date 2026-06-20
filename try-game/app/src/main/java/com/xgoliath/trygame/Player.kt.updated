@@ -1,0 +1,74 @@
+package com.xgoliath.trygame
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+
+class Player(x: Float, y: Float, private val loader: SpriteLoader) : Entity(x, y, 64f, 64f) {
+    private var idle: Bitmap? = null
+    private var attackBmp: Bitmap? = null
+    private var onGround = false
+    var isAttacking = false
+    private var attackTimer = 0L
+
+    init {
+        idle = loader.load("standing_with_stick.png")
+        attackBmp = loader.load("stick-hit.png")
+        idle?.let { width = it.width.toFloat(); height = it.height.toFloat() }
+    }
+
+    override fun update(delta: Long) {
+        // apply gravity
+        vy += 2000f * (delta / 1000f)
+        super.update(delta)
+        if (y > 1000f) { y = 1000f; vy = 0f; onGround = true }
+
+        if (isAttacking) {
+            attackTimer += delta
+            if (attackTimer > 300) {
+                isAttacking = false
+                attackTimer = 0
+            }
+        }
+    }
+
+    override fun draw(canvas: Canvas) {
+        if (isAttacking) {
+            attackBmp?.let { canvas.drawBitmap(it, x, y, null); return }
+        }
+        idle?.let { canvas.drawBitmap(it, x, y, null) } ?: super.draw(canvas)
+    }
+
+    fun jump() {
+        if (onGround) {
+            vy = -800f
+            onGround = false
+        }
+    }
+
+    fun attack() {
+        isAttacking = true
+        attackTimer = 0
+    }
+
+    fun attackHitboxIntersects(e: Enemy): Boolean {
+        // a small rectangle in front
+        val ax = if (true) x + width else x - 20f
+        val ay = y
+        val aw = width
+        val ah = height
+        val r1 = android.graphics.RectF(ax, ay, ax + aw, ay + ah)
+        val r2 = android.graphics.RectF(e.x, e.y, e.x + e.width, e.y + e.height)
+        return android.graphics.RectF.intersects(r1, r2)
+    }
+
+    fun collidesWith(p: Platform): Boolean {
+        val bottom = y + height
+        return bottom >= p.y && bottom <= p.y + 50 && x + width > p.x && x < p.x + p.width
+    }
+
+    fun landOn(p: Platform) {
+        y = p.y - height
+        vy = 0f
+        onGround = true
+    }
+}
