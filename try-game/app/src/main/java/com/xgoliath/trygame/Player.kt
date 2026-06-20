@@ -4,32 +4,86 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 
 class Player(x: Float, y: Float, private val loader: SpriteLoader) : Entity(x, y, 64f, 64f) {
-    private var idle: Bitmap? = null
-    private var hasLoaded = false
+    private var idleAnim: AnimatedSprite? = null
+    private var runAnim: AnimatedSprite? = null
+    private var attackAnim: AnimatedSprite? = null
+    private var onGround = false
+    var isAttacking = false
+    private var attackTimer = 0L
 
     init {
-        // load lightweight placeholder; actual asset loaded when available
+        idleAnim = AnimatedSprite(loader, "standing_with_stick.png", 200)
+        runAnim = AnimatedSprite(loader, "walking.png", 100)
+        attackAnim = AnimatedSprite(loader, "stick-hit.png", 120)
+        idleAnim?.let { width = it.width().toFloat(); height = it.height().toFloat() }
     }
 
     override fun update(delta: Long) {
+        // apply gravity
+        vy += 2000f * (delta / 1000f)
+        // clamp terminal velocity
+        if (vy > 1500f) vy = 1500f
+
         super.update(delta)
-        // simple gravity
-        vy += 1000f * (delta / 1000f)
-        if (y > 1000f) y = 1000f
-        if (!hasLoaded) {
-            idle = loader.load("standing.png")
-            hasLoaded = true
-            idle?.let { width = it.width.toFloat(); height = it.height.toFloat() }
+
+        if (y > 1100f) { y = 1100f; vy = 0f; onGround = true }
+
+        if (isAttacking) {
+            attackTimer += delta
+            attackAnim?.update(delta)
+            if (attackTimer > 300) {
+                isAttacking = false
+                attackTimer = 0
+            }
+        } else {
+            // update run/idle animations
+            if (vx != 0f) runAnim?.update(delta) else idleAnim?.update(delta)
         }
     }
 
     override fun draw(canvas: Canvas) {
-        idle?.let {
-            canvas.drawBitmap(it, x, y, null)
-        } ?: super.draw(canvas)
+        if (isAttacking && attackAnim != null) {
+            attackAnim?.draw(canvas, x, y)
+            return
+        }
+        if (vx != 0f && runAnim != null) {
+            runAnim?.draw(canvas, x, y); return
+        }
+        idleAnim?.draw(canvas, x, y)
+    }
+
+    fun jump() {
+        if (onGround) {
+            vy = -900f
+            onGround = false
+        }
     }
 
     fun attack() {
-        // placeholder for attack logic
+        if (!isAttacking) {
+            isAttacking = true
+            attackTimer = 0
+        }
+    }
+
+    fun attackHitboxIntersects(e: Enemy): Boolean {
+        val ax = x + width
+        val ay = y
+        val aw = 30f
+        val ah = height
+        val r1 = android.graphics.RectF(ax, ay, ax + aw, ay + ah)
+        val r2 = android.graphics.RectF(e.x, e.y, e.x + e.width, e.y + e.height)
+        return android.graphics.RectF.intersects(r1, r2)
+    }
+
+    fun collidesWith(p: Platform): Boolean {
+        val bottom = y + height
+        return bottom >= p.y && bottom <= p.y + 50 && x + width > p.x && x < p.x + p.width
+    }
+
+    fun landOn(p: Platform) {
+        y = p.y - height
+        vy = 0f
+        onGround = true
     }
 }
