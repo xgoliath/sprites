@@ -1,0 +1,62 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+}
+
+android {
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.xgoliath.trygame"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "0.1"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    // Copy sprites from repository root into app/assets at build time. This allows us to bundle existing files
+    // from the repository without duplicating binary files in git.
+    applicationVariants.all { variant ->
+        def copyTaskName = "copySpritesFor${variant.name.capitalize()}"
+        task(copyTaskName, type: Copy) {
+            def assetsDir = file("${projectDir}/src/main/assets")
+            outputs.dir assetsDir
+            // list of files we expect at repo root; the copy will ignore missing files
+            from(project.rootDir) {
+                include 'standing.png'
+                include 'walking.png'
+                include 'standing_with_stick.png'
+                include 'stick-hit.png'
+                include 'marten-run.png'
+                include 'marten-idle.png'
+                include 'marten-attack.png'
+                include 'marten-standing.png'
+                include 'marten-hurt.png'
+                include 'marten-jump-up.png'
+                include 'marten-jump-down.png'
+                include 'duck.png'
+                include 'hurt.png'
+                include 'achya.mpeg'
+                include 'kasogarni.mpeg'
+                include 'malsaprokolatti.mpeg'
+                include 'puwadinumalai.mpeg'
+            }
+            into assetsDir
+        }
+        variant.mergeAssetsProvider.get().dependsOn copyTaskName
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
+}
