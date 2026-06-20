@@ -1,0 +1,45 @@
+name: Build Android Debug APK
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ try-game-initial ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Build Debug APK
+        working-directory: try-game
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: try-game-apk
+          path: try-game/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Commit APK to repo
+        if: success()
+        run: |
+          mkdir -p apks
+          cp try-game/app/build/outputs/apk/debug/app-debug.apk apks/app-debug.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apks/app-debug.apk
+          git commit -m "Add debug APK [ci skip]" || echo "No changes to commit"
+          git push origin HEAD:try-game-initial
