@@ -10,19 +10,31 @@ import android.view.MotionEvent
 class GameSurfaceView(context: Context, attrs: AttributeSet? = null) : SurfaceView(context, attrs), SurfaceHolder.Callback {
     private var thread: GameLoop? = null
     private val spriteLoader = SpriteLoader(context.assets)
-    private val player = Player(100f, 300f, spriteLoader)
+    private val world = GameWorld(spriteLoader)
+    private val input = InputController()
+    private val soundManager = SoundManager(context)
+
+    private var lastRideToggle = 0L
 
     constructor(context: Context) : this(context, null)
 
     init {
         holder.addCallback(this)
         isFocusable = true
+        // instantiate player and companion
+        world.player = Player(100f, 900f, spriteLoader)
+        world.companion = Companion(150f, 900f, spriteLoader)
+        world.companion.followTarget = world.player
+
+        // preload background music (optional)
+        soundManager.preloadBackground("achya.mpeg")
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
         thread = GameLoop(holder, this)
         thread?.running = true
         thread?.start()
+        soundManager.playBackground("achya.mpeg")
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
@@ -37,21 +49,80 @@ class GameSurfaceView(context: Context, attrs: AttributeSet? = null) : SurfaceVi
             } catch (e: InterruptedException) {
             }
         }
+        soundManager.release()
     }
 
     fun update(delta: Long) {
-        player.update(delta)
+        // handle input
+        val p = world.player
+        val speed = 300f
+        p.vx = 0f
+        if (input.left) p.vx = -speed
+        if (input.right) p.vx = speed
+        if (input.jump) { p.jump() }
+
+        // handle attack input - trigger once when pressed
+        if (input.attack && !p.isAttacking) {
+            p.attack()
+            // optional sfx (if available)
+            soundManager.playSfx("attack")
+        }
+
+        // handle ride toggle - use a simple debounce
+        if (input.rideRequested) {
+            val now = System.currentTimeMillis()
+            if (now - lastRideToggle > 500) {
+                world.companion.isRidden = !world.companion.isRidden
+                lastRideToggle = now
+            }
+            input.rideRequested = false
+        }
+
+        // if companion is ridden, allow it to attack when player attacks
+        if (p.isAttacking && world.companion.isRidden) {
+            world.companion.attack()
+            soundManager.playSfx("marten_attack")
+        }
+
+        world.update(delta)
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         // clear background
         canvas.drawRGB(135, 206, 235) // sky blue
-        player.draw(canvas)
+
+        // draw ground and platforms with green/yellow styling
+        for (pl in world.platforms) {
+            val paint = android.graphics.Paint()
+            // alternate color for visual variety
+            paint.color = if ((pl.x / 100).toInt() % 2 == 0) android.graphics.Color.rgb(34, 177, 76) else android.graphics.Color.rgb(255, 242, 0)
+            canvas.drawRect(pl.x, pl.y, pl.x + pl.width, pl.y + pl.height, paint)
+        }
+
+        // draw world entities
+        world.draw(canvas)
+
+        // debug input overlay
+        input.drawDebug(canvas, width, height)
+
+        // HUD
+        val paint = android.graphics.Paint()
+        paint.color = android.graphics.Color.BLACK
+        paint.textSize = 40f
+        canvas.drawText("HP: 3", 20f, 50f, paint)
+        canvas.drawText("Enemies: ${world.enemies.size}", 20f, 100f, paint)
+        canvas.drawText("Ridden: ${world.companion.isRidden}", 20f, 150f, paint)
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        event?.let { input.handleTouch(it, width, height) }
+        return true
     }
 
     fun pause() {
         thread?.running = false
+        soundManager.pauseBackground()
     }
 
     fun resume() {
@@ -60,13 +131,6 @@ class GameSurfaceView(context: Context, attrs: AttributeSet? = null) : SurfaceVi
             thread?.running = true
             thread?.start()
         }
-    }
-
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        // placeholder: on touch, player attacks
-        if (event?.action == MotionEvent.ACTION_DOWN) {
-            player.attack()
-        }
-        return true
+        soundManager.playBackground("achya.mpeg")
     }
 }

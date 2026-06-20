@@ -10,22 +10,30 @@ class InputController {
     var right = false
     var jump = false
     var attack = false
-    var ride = false
+    // rideRequested is set when a multi-touch (two+ fingers) DOWN occurs; the game toggles ride once per request
+    var rideRequested = false
 
-    // simple touch areas: left half bottom = left/right, right bottom quarter = jump, right-top small area = attack, ride toggle double tap?
+    // simple touch areas: left third = left, middle third = right, right-bottom half = jump, right-top half = attack
     fun handleTouch(event: MotionEvent, width: Int, height: Int) {
         val x = event.x
         val y = event.y
-        when (event.action) {
-            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                // left area
-                left = x < width / 3
-                right = x >= width / 3 && x < width * 2 / 3
-                jump = x >= width * 2 / 3 && y > height / 2
-                attack = x >= width * 2 / 3 && y <= height / 2
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_MOVE -> {
+                // detect multi-touch for ride toggle
+                if (event.pointerCount > 1 && (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN)) {
+                    rideRequested = true
+                }
+
+                left = x < width / 3f
+                right = x >= width / 3f && x < width * 2 / 3f
+                jump = x >= width * 2 / 3f && y > height / 2f
+                attack = x >= width * 2 / 3f && y <= height / 2f
             }
-            MotionEvent.ACTION_UP -> {
-                left = false; right = false; jump = false; attack = false
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                // if all pointers are up, clear controls for that finger set
+                if (event.pointerCount <= 1) {
+                    left = false; right = false; jump = false; attack = false
+                }
             }
         }
     }
