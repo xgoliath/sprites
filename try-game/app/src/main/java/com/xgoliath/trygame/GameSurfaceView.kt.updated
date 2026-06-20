@@ -1,0 +1,91 @@
+package com.xgoliath.trygame
+
+import android.content.Context
+import android.graphics.Canvas
+import android.util.AttributeSet
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import android.view.MotionEvent
+
+class GameSurfaceView(context: Context, attrs: AttributeSet? = null) : SurfaceView(context, attrs), SurfaceHolder.Callback {
+    private var thread: GameLoop? = null
+    private val spriteLoader = SpriteLoader(context.assets)
+    private val world = GameWorld(spriteLoader)
+    private val input = InputController()
+
+    constructor(context: Context) : this(context, null)
+
+    init {
+        holder.addCallback(this)
+        isFocusable = true
+        // instantiate player and companion
+        world.player = Player(100f, 900f, spriteLoader)
+        world.companion = Companion(150f, 900f, spriteLoader)
+        world.companion.followTarget = world.player
+    }
+
+    override fun surfaceCreated(holder: SurfaceHolder) {
+        thread = GameLoop(holder, this)
+        thread?.running = true
+        thread?.start()
+    }
+
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+
+    override fun surfaceDestroyed(holder: SurfaceHolder) {
+        var retry = true
+        thread?.running = false
+        while (retry) {
+            try {
+                thread?.join()
+                retry = false
+            } catch (e: InterruptedException) {
+            }
+        }
+    }
+
+    fun update(delta: Long) {
+        // handle input
+        val p = world.player
+        val speed = 300f
+        p.vx = 0f
+        if (input.left) p.vx = -speed
+        if (input.right) p.vx = speed
+        if (input.jump) { p.jump(); }
+        if (input.attack) p.attack()
+
+        world.update(delta)
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        // clear background
+        canvas.drawRGB(135, 206, 235) // sky blue
+        // draw ground color
+        world.draw(canvas)
+        input.drawDebug(canvas, width, height)
+
+        // HUD
+        val paint = android.graphics.Paint()
+        paint.color = android.graphics.Color.BLACK
+        paint.textSize = 40f
+        canvas.drawText("HP: 3", 20f, 50f, paint)
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        event?.let { input.handleTouch(it, width, height) }
+        return true
+    }
+
+    fun pause() {
+        thread?.running = false
+    }
+
+    fun resume() {
+        if (thread == null || !thread!!.running) {
+            thread = GameLoop(holder, this)
+            thread?.running = true
+            thread?.start()
+        }
+    }
+}

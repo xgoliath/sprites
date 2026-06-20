@@ -1,0 +1,5 @@
+CI trigger file
+
+This file is committed to trigger the GitHub Actions workflow that builds the debug APK and commits it into try-game/apks/app-debug.apk. Commit timestamp:
+
+2026-06-20T09:27:30Z

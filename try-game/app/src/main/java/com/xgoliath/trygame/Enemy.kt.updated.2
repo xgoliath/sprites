@@ -1,0 +1,33 @@
+package com.xgoliath.trygame
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+
+class Enemy(x: Float, y: Float, loader: SpriteLoader) : NPC(x, y, 64f, 64f, loader) {
+    private var idleAnim: AnimatedSprite? = null
+    private var direction = -1f
+    private var patrolLeft = x - 200f
+    private var patrolRight = x + 200f
+
+    init {
+        val targetH = (Config.TARGET_CHARACTER_HEIGHT * Config.ENEMY_SCALE).toInt()
+        idleAnim = AnimatedSprite(loader, "duck.png", 150, targetH)
+        idleAnim?.let { width = it.width().toFloat(); height = it.height().toFloat() }
+        // enemy hitbox
+        hitboxOffsetX = width * 0.1f
+        hitboxOffsetY = height * 0.1f
+        hitboxWidth = width * 0.8f
+        hitboxHeight = height * 0.8f
+    }
+
+    override fun update(delta: Long) {
+        vx = direction * 100f
+        super.update(delta)
+        if (x < patrolLeft) direction = 1f
+        if (x > patrolRight) direction = -1f
+    }
+
+    override fun draw(canvas: Canvas) {
+        idleAnim?.draw(canvas, x, y) ?: super.draw(canvas)
+    }
+}
