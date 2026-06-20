@@ -1,0 +1,25 @@
+# try-game
+
+This Android Studio game project (Kotlin) is a work-in-progress playable demo featuring Aama and Malsapro.
+
+Progress
+- Core game loop (SurfaceView + fixed timestep)
+- Sprite loader, animated sprite support, and size normalization
+- Player (Aama) with run/jump/attack
+- Companion (Malsapro) with follow and ride mechanics
+- Enemies with basic patrol and damage
+- Particle effects on enemy hits/deaths
+- Sound manager and basic SFX/background audio handling
+- CI workflow that builds a debug APK
+
+How to build & run
+1. Open try-game in Android Studio.
+2. Build -> Make Project. The Gradle copy task will copy sprites from the repository root into app/src/main/assets/ before compilation.
+3. Run the app on a device or emulator (minSdk 21).
+
+Debug APK (CI)
+- The GitHub Actions workflow runs on pushes to try-game-initial and uploads the debug APK as an artifact named `try-game-apk`.
+
+Notes
+- Sprites and audio are bundled from the repository root; do not remove the original files (e.g., standing.png, marten-run.png, achya.mpeg) from the repo root or the build task will not find them.
+- This is a demo iteration; I will continue polishing gameplay, animations, controls, and UI.
